@@ -174,24 +174,54 @@
 
       switch (field.type) {
         case 'text':
-          group.innerHTML += `<input type="text" name="${field.id}" placeholder="${field.placeholder || ''}" ${isRequired ? 'required' : ''}>`;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.name = field.id;
+          input.placeholder = field.placeholder || '';
+          if (isRequired) input.required = true;
+          group.appendChild(input);
           break;
 
         case 'select':
-          let selectHtml = `<select name="${field.id}" ${isRequired ? 'required' : ''}>`;
-          selectHtml += `<option value="" disabled selected>選択してください</option>`;
-          options.forEach(opt => { selectHtml += `<option value="${opt}">${opt}</option>`; });
-          selectHtml += `</select>`;
-          group.innerHTML += selectHtml;
+          const select = document.createElement('select');
+          select.name = field.id;
+          if (isRequired) select.required = true;
+          
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.disabled = true;
+          defaultOpt.selected = true;
+          defaultOpt.textContent = '選択してください';
+          select.appendChild(defaultOpt);
+
+          options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            select.appendChild(option);
+          });
+          group.appendChild(select);
           break;
 
         case 'radio':
-          let radioHtml = `<div class="options-group">`;
+          const optionsGroup = document.createElement('div');
+          optionsGroup.className = 'options-group';
+
           options.forEach(opt => {
-            radioHtml += `<label class="option-item"><input type="radio" name="${field.id}" value="${opt}" ${isRequired ? 'required' : ''}> ${opt}</label>`;
+            const optLabel = document.createElement('label');
+            optLabel.className = 'option-item';
+            
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = field.id;
+            radio.value = opt;
+            if (isRequired) radio.required = true;
+
+            optLabel.appendChild(radio);
+            optLabel.appendChild(document.createTextNode(` ${opt}`));
+            optionsGroup.appendChild(optLabel);
           });
-          radioHtml += `</div>`;
-          group.innerHTML += radioHtml;
+          group.appendChild(optionsGroup);
           break;
       }
 
