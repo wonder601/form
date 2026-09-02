@@ -95,27 +95,40 @@
       margin-top: 20px;
     }
     .btn-submit:hover { background-color: #1d4ed8; }
+    .btn-submit:disabled { background-color: #94a3b8; cursor: not-allowed; }
     #loading { text-align: center; padding: 40px; color: #64748b; }
+    #message {
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+      font-weight: bold;
+      text-align: center;
+    }
+    #message.success { background-color: #dcfce7; color: #166534; }
+    #message.error { background-color: #fee2e2; color: #991b1b; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div id="loading">評価項目を読み込み中...</div>
-  <form id="dynamic-form" style="display: none;" onsubmit="alert('現在表示テスト中のため、送信処理は未実装です（STEP 3で設定）'); return false;">
+  <form id="dynamic-form" style="display: none;">
     <h1 id="form-title">人事評価シート</h1>
     <div id="form-fields"></div>
-    <button type="submit" class="btn-submit">送信する</button>
+    <button type="submit" id="submit-btn" class="btn-submit">送信する</button>
   </form>
+  <div id="message"></div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // URLからパラメータ (?form=evaluation_18.csv など) を取得
-    const params = new URLSearchParams(window.location.search);
-    const csvFile = params.get('form') || 'evaluation_18.csv'; // デフォルトファイル名
+  // ★ここに取得した Web アプリ URL を貼り付けてください
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwWtoVhaTj4X7HTQKYdg1ITaiiilJEVnjNdVjjTE1DaIjEyM2iOQQdPKnTUzZxvuVwI/exec';
 
-    // CSVファイルの読み込み
+  document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const csvFile = params.get('form') || 'evaluation_18.csv';
+
     Papa.parse(csvFile, {
       download: true,
       header: true,
@@ -146,13 +159,11 @@
       const group = document.createElement('div');
       group.className = 'form-group';
 
-      // 1. 質問タイトルの描画
       const label = document.createElement('label');
       label.className = 'form-label';
       label.innerHTML = `${field.label}${reqBadge}`;
       group.appendChild(label);
 
-      // 2. 「めやす」が存在すればグレー枠で描画
       if (field.description && field.description.trim() !== '') {
         const formattedDesc = field.description.replace(/\\n/g, '<br>');
         const desc = document.createElement('div');
@@ -161,7 +172,6 @@
         group.appendChild(desc);
       }
 
-      // 3. 回答フォーム要素の描画
       switch (field.type) {
         case 'text':
           group.innerHTML += `<input type="text" name="${field.id}" placeholder="${field.placeholder || ''}" ${isRequired ? 'required' : ''}>`;
@@ -191,6 +201,49 @@
     document.getElementById('loading').style.display = 'none';
     document.getElementById('dynamic-form').style.display = 'block';
   }
+
+  // 送信処理の設定
+  document.getElementById('dynamic-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submit-btn');
+    const messageEl = document.getElementById('message');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
+    messageEl.style.display = 'none';
+
+    const formData = new FormData(this);
+    const data = {};
+    formData.forEach((value, key) => { data[key] = value; });
+
+    fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(resData => {
+      if (resData.status === 'success') {
+        messageEl.className = 'success';
+        messageEl.textContent = '回答を送信しました！ご協力ありがとうございました。';
+        messageEl.style.display = 'block';
+        document.getElementById('dynamic-form').reset();
+      } else {
+        throw new Error(resData.message || '送信エラーが発生しました。');
+      }
+    })
+    .catch(err => {
+      messageEl.className = 'error';
+      messageEl.textContent = '送信に失敗しました。再度お試しいただくか管理者にお問い合わせください。';
+      messageEl.style.display = 'block';
+      console.error(err);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送信する';
+    });
+  });
 </script>
 
 </body>
