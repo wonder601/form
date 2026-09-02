@@ -2,39 +2,196 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>お問い合わせフォーム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人事評価シート</title>
+  <!-- パース用ライブラリ (PapaParse) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input, textarea { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
-    button:hover { background: #0056b3; }
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 20px 10px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      font-size: 1.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 12px;
+      margin-top: 0;
+      color: #0f172a;
+    }
+    .form-group {
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .form-label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1.05rem;
+    }
+    .req { color: #ef4444; margin-left: 4px; }
+    /* めやす表示エリアの装飾 */
+    .form-description {
+      background-color: #f1f5f9;
+      border-left: 4px solid #64748b;
+      padding: 10px 14px;
+      margin: 8px 0 14px 0;
+      font-size: 0.88rem;
+      color: #334155;
+      border-radius: 0 6px 6px 0;
+      line-height: 1.6;
+    }
+    .form-description-title {
+      font-weight: bold;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    .options-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+    .option-item:hover { background-color: #f8fafc; }
+    .btn-submit {
+      width: 100%;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .btn-submit:hover { background-color: #1d4ed8; }
+    #loading { text-align: center; padding: 40px; color: #64748b; }
   </style>
 </head>
 <body>
 
-  <h2>お問合せフォーム</h2>
-
-  <!-- YOUR_FORM_ID の部分をFormspree発行のIDに置き換えてください -->
-  <form action="https://formspree.io/f/https://formspree.io/f/xqpzqegn" method="POST">
-    <div class="form-group">
-      <label for="name">お名前</label>
-      <input type="text" id="name" name="name" required>
-    </div>
-
-    <div class="form-group">
-      <label for="email">メールアドレス</label>
-      <input type="email" id="email" name="email" required>
-    </div>
-
-    <div class="form-group">
-      <label for="message">ご意見・ご感想</label>
-      <textarea id="message" name="message" rows="5" required></textarea>
-    </div>
-
-    <button type="submit">送信する</button>
+<div class="container">
+  <div id="loading">評価項目を読み込み中...</div>
+  <form id="dynamic-form" style="display: none;" onsubmit="alert('現在表示テスト中のため、送信処理は未実装です（STEP 3で設定）'); return false;">
+    <h1 id="form-title">人事評価シート</h1>
+    <div id="form-fields"></div>
+    <button type="submit" class="btn-submit">送信する</button>
   </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // URLからパラメータ (?form=evaluation_18.csv など) を取得
+    const params = new URLSearchParams(window.location.search);
+    const csvFile = params.get('form') || 'evaluation_18.csv'; // デフォルトファイル名
+
+    // CSVファイルの読み込み
+    Papa.parse(csvFile, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        renderForm(results.data);
+      },
+      error: (err) => {
+        document.getElementById('loading').textContent = 'CSVの読み込みに失敗しました。ファイル名を確認してください。';
+      }
+    });
+  });
+
+  function renderForm(fields) {
+    const fieldsContainer = document.getElementById('form-fields');
+    const titleEl = document.getElementById('form-title');
+
+    fields.forEach(field => {
+      const isRequired = field.required?.toLowerCase() === 'true';
+      const reqBadge = isRequired ? '<span class="req">*</span>' : '';
+      const options = field.options ? field.options.split('|').map(s => s.trim()) : [];
+
+      if (field.type === 'header') {
+        titleEl.textContent = field.label;
+        return;
+      }
+
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      // 1. 質問タイトルの描画
+      const label = document.createElement('label');
+      label.className = 'form-label';
+      label.innerHTML = `${field.label}${reqBadge}`;
+      group.appendChild(label);
+
+      // 2. 「めやす」が存在すればグレー枠で描画
+      if (field.description && field.description.trim() !== '') {
+        const formattedDesc = field.description.replace(/\\n/g, '<br>');
+        const desc = document.createElement('div');
+        desc.className = 'form-description';
+        desc.innerHTML = `<div class="form-description-title">【めやす】</div>${formattedDesc}`;
+        group.appendChild(desc);
+      }
+
+      // 3. 回答フォーム要素の描画
+      switch (field.type) {
+        case 'text':
+          group.innerHTML += `<input type="text" name="${field.id}" placeholder="${field.placeholder || ''}" ${isRequired ? 'required' : ''}>`;
+          break;
+
+        case 'select':
+          let selectHtml = `<select name="${field.id}" ${isRequired ? 'required' : ''}>`;
+          selectHtml += `<option value="" disabled selected>選択してください</option>`;
+          options.forEach(opt => { selectHtml += `<option value="${opt}">${opt}</option>`; });
+          selectHtml += `</select>`;
+          group.innerHTML += selectHtml;
+          break;
+
+        case 'radio':
+          let radioHtml = `<div class="options-group">`;
+          options.forEach(opt => {
+            radioHtml += `<label class="option-item"><input type="radio" name="${field.id}" value="${opt}" ${isRequired ? 'required' : ''}> ${opt}</label>`;
+          });
+          radioHtml += `</div>`;
+          group.innerHTML += radioHtml;
+          break;
+      }
+
+      fieldsContainer.appendChild(group);
+    });
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('dynamic-form').style.display = 'block';
+  }
+</script>
 
 </body>
 </html>
