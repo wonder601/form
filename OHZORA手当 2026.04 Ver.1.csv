@@ -1,5 +1,0 @@
-id,type,label,description,options,required,placeholder
-form_title,header,テスト用人事評価シート,,,,
-emp_name,text,氏名,,,true,山田 太郎
-q01,rating,今期の目標達成度,,,true,
-q02,textarea,良かった点・改善点,,,false,
