@@ -97,9 +97,9 @@
 
 <script>
   // ★設定項目：ご自身の情報に合わせて書き換えてください
-  const GITHUB_USER = 'wonder601'; // 例: 'taro-yamada'
-  const GITHUB_REPO = 'form'; // 例: 'hr-eval-system'
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwWtoVhaTj4X7HTQKYdg1ITaiiilJEVnjNdVjjTE1DaIjEyM2iOQQdPKnTUzZxvuVwI/exec'; // ★取得したWebアプリURL
+  const GITHUB_USER = 'wonder601'; // ご自身のユーザー名
+  const GITHUB_REPO = 'form'; // ご自身のリポジトリ名
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwWtoVhaTj4X7HTQKYdg1ITaiiilJEVnjNdVjjTE1DaIjEyM2iOQQdPKnTUzZxvuVwI/exec'; // WebアプリURL
 
   document.addEventListener('DOMContentLoaded', () => {
     const savedToken = localStorage.getItem('gh_token');
@@ -221,7 +221,6 @@
       skipEmptyLines: true,
       complete: async (results) => {
         try {
-          // ヘッダー行の抽出
           const headers = ['送信日時'];
           results.data.forEach(row => {
             if (row.id && row.type !== 'header' && row.type !== 'config') {
@@ -231,7 +230,6 @@
 
           const sheetName = file.name.replace('.csv', '');
 
-          // 1. GASへ新シート作成リクエストを送る
           statusEl.textContent = 'スプレッドシートに新しいタブを作成中...';
           await fetch(GAS_WEB_APP_URL, {
             method: 'POST',
@@ -243,14 +241,12 @@
             })
           });
 
-          // 2. GitHubへCSVファイルをアップロード
           statusEl.textContent = 'GitHubへファイルを保存中...';
           const reader = new FileReader();
           reader.onload = async (e) => {
             const content = e.target.result;
             const base64Content = btoa(unescape(encodeURIComponent(content)));
 
-            // 既存ファイルの有無（sha取得）
             let sha = null;
             try {
               const checkRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${file.name}`, {
@@ -294,10 +290,17 @@
     });
   }
 
-  // --- 公開 / 非公開の切り替え ---
+  // ★【修正箇所】公開 / 非公開の切り替え処理★
   async function toggleVisibility(filename, isPrivate, sha) {
     const token = getToken();
-    const newFilename = isPrivate ? filename.substring(1) : '_' + filename;
+    
+    // 非公開ファイル（_filename.csv）から先頭のアンダースコアを正確に削除する
+    let newFilename;
+    if (isPrivate) {
+      newFilename = filename.startsWith('_') ? filename.substring(1) : filename;
+    } else {
+      newFilename = '_' + filename;
+    }
     
     if (!confirm(`「${filename}」を${isPrivate ? '公開' : '非公開'}にしますか？`)) return;
 
@@ -306,10 +309,11 @@
       const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${filename}`, {
         headers: { 'Authorization': `token ${token}` }
       });
+      if (!res.ok) throw new Error('ファイルの読み込みに失敗しました。');
       const fileData = await res.json();
 
-      // 2. 新しい名前でファイルを作成
-      await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${newFilename}`, {
+      // 2. 新しい名前（_の有無を変更した名前）でファイルを作成
+      const createRes = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${newFilename}`, {
         method: 'PUT',
         headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -317,6 +321,7 @@
           content: fileData.content
         })
       });
+      if (!createRes.ok) throw new Error('新しい状態でのファイル生成に失敗しました。');
 
       // 3. 元のファイルを削除
       await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${filename}`, {
@@ -328,7 +333,9 @@
         })
       });
 
-      loadFormList();
+      // 一覧を再読み込み
+      setTimeout(() => loadFormList(), 1000);
+
     } catch (err) {
       alert('公開切り替えに失敗しました: ' + err.message);
     }
@@ -350,7 +357,7 @@
       });
 
       if (!res.ok) throw new Error('削除に失敗しました。');
-      loadFormList();
+      setTimeout(() => loadFormList(), 1000);
     } catch (err) {
       alert(err.message);
     }
