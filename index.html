@@ -1,280 +1,31 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>人事評価シート</title>
-  <!-- パース用ライブラリ (PapaParse) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <style>
-    body {
-      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      background-color: #f8fafc;
-      color: #1e293b;
-      margin: 0;
-      padding: 20px 10px;
-      line-height: 1.6;
-    }
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      font-size: 1.5rem;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 12px;
-      margin-top: 0;
-      color: #0f172a;
-    }
-    .form-group {
-      margin-bottom: 28px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    .form-label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 6px;
-      font-size: 1.05rem;
-    }
-    .req { color: #ef4444; margin-left: 4px; }
-    /* めやす表示エリアの装飾 */
-    .form-description {
-      background-color: #f1f5f9;
-      border-left: 4px solid #64748b;
-      padding: 10px 14px;
-      margin: 8px 0 14px 0;
-      font-size: 0.88rem;
-      color: #334155;
-      border-radius: 0 6px 6px 0;
-      line-height: 1.6;
-    }
-    .form-description-title {
-      font-weight: bold;
-      color: #1e293b;
-      margin-bottom: 4px;
-    }
-    input[type="text"], select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 1rem;
-    }
-    .options-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .option-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      padding: 6px 8px;
-      border-radius: 4px;
-    }
-    .option-item:hover { background-color: #f8fafc; }
-    .btn-submit {
-      width: 100%;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      padding: 14px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    .btn-submit:hover { background-color: #1d4ed8; }
-    .btn-submit:disabled { background-color: #94a3b8; cursor: not-allowed; }
-    #loading { text-align: center; padding: 40px; color: #64748b; }
-    #message {
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 20px;
-      display: none;
-      font-weight: bold;
-      text-align: center;
-    }
-    #message.success { background-color: #dcfce7; color: #166534; }
-    #message.error { background-color: #fee2e2; color: #991b1b; }
-  </style>
-</head>
-<body>
+// URLから現在のCSVファイル名を取得（例: "test_eval.csv" -> "test_eval"）
+const urlParams = new URLSearchParams(window.location.search);
+const csvFileName = urlParams.get('form') || '';
+const currentSheetName = csvFileName.replace('.csv', '');
 
-<div class="container">
-  <div id="loading">評価項目を読み込み中...</div>
-  <form id="dynamic-form" style="display: none;">
-    <h1 id="form-title">人事評価シート</h1>
-    <div id="form-fields"></div>
-    <button type="submit" id="submit-btn" class="btn-submit">送信する</button>
-  </form>
-  <div id="message"></div>
-</div>
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-<script>
-  // ★ここに取得した Web アプリ URL を貼り付けてください
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwWtoVhaTj4X7HTQKYdg1ITaiiilJEVnjNdVjjTE1DaIjEyM2iOQQdPKnTUzZxvuVwI/exec';
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const csvFile = params.get('form') || 'evaluation_18.csv';
-
-    Papa.parse(csvFile, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        renderForm(results.data);
-      },
-      error: (err) => {
-        document.getElementById('loading').textContent = 'CSVの読み込みに失敗しました。ファイル名を確認してください。';
-      }
-    });
+  // フォームの入力値を取得
+  const formData = new FormData(form);
+  const data = {};
+  formData.forEach((value, key) => {
+    data[key] = value;
   });
 
-  function renderForm(fields) {
-    const fieldsContainer = document.getElementById('form-fields');
-    const titleEl = document.getElementById('form-title');
+  // ★ここを追加！：保存先のシート名（タブ名）をデータに含める
+  data.sheetName = currentSheetName;
 
-    fields.forEach(field => {
-      const isRequired = field.required?.toLowerCase() === 'true';
-      const reqBadge = isRequired ? '<span class="req">*</span>' : '';
-      const options = field.options ? field.options.split('|').map(s => s.trim()) : [];
-
-      if (field.type === 'header') {
-        titleEl.textContent = field.label;
-        return;
-      }
-
-      const group = document.createElement('div');
-      group.className = 'form-group';
-
-      const label = document.createElement('label');
-      label.className = 'form-label';
-      label.innerHTML = `${field.label}${reqBadge}`;
-      group.appendChild(label);
-
-      if (field.description && field.description.trim() !== '') {
-        const formattedDesc = field.description.replace(/\\n/g, '<br>');
-        const desc = document.createElement('div');
-        desc.className = 'form-description';
-        desc.innerHTML = `<div class="form-description-title">【めやす】</div>${formattedDesc}`;
-        group.appendChild(desc);
-      }
-
-      switch (field.type) {
-        case 'text':
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.name = field.id;
-          input.placeholder = field.placeholder || '';
-          if (isRequired) input.required = true;
-          group.appendChild(input);
-          break;
-
-        case 'select':
-          const select = document.createElement('select');
-          select.name = field.id;
-          if (isRequired) select.required = true;
-          
-          const defaultOpt = document.createElement('option');
-          defaultOpt.value = '';
-          defaultOpt.disabled = true;
-          defaultOpt.selected = true;
-          defaultOpt.textContent = '選択してください';
-          select.appendChild(defaultOpt);
-
-          options.forEach(opt => {
-            const option = document.createElement('option');
-            option.value = opt;
-            option.textContent = opt;
-            select.appendChild(option);
-          });
-          group.appendChild(select);
-          break;
-
-        case 'radio':
-          const optionsGroup = document.createElement('div');
-          optionsGroup.className = 'options-group';
-
-          options.forEach(opt => {
-            const optLabel = document.createElement('label');
-            optLabel.className = 'option-item';
-            
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.name = field.id;
-            radio.value = opt;
-            if (isRequired) radio.required = true;
-
-            optLabel.appendChild(radio);
-            optLabel.appendChild(document.createTextNode(` ${opt}`));
-            optionsGroup.appendChild(optLabel);
-          });
-          group.appendChild(optionsGroup);
-          break;
-      }
-
-      fieldsContainer.appendChild(group);
-    });
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('dynamic-form').style.display = 'block';
-  }
-
-  // 送信処理の設定
-  document.getElementById('dynamic-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const submitBtn = document.getElementById('submit-btn');
-    const messageEl = document.getElementById('message');
-    
-    submitBtn.disabled = true;
-    submitBtn.textContent = '送信中...';
-    messageEl.style.display = 'none';
-
-    const formData = new FormData(this);
-    const data = {};
-    formData.forEach((value, key) => { data[key] = value; });
-
-    fetch(GAS_WEB_APP_URL, {
+  // GASへ送信
+  try {
+    const response = await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data)
-    })
-    .then(res => res.json())
-    .then(resData => {
-      if (resData.status === 'success') {
-        messageEl.className = 'success';
-        messageEl.textContent = '回答を送信しました！お疲れ様でした。';
-        messageEl.style.display = 'block';
-        document.getElementById('dynamic-form').reset();
-      } else {
-        throw new Error(resData.message || '送信エラーが発生しました。');
-      }
-    })
-    .catch(err => {
-      messageEl.className = 'error';
-      messageEl.textContent = '送信に失敗しました。再度お試しいただくか管理者にお問い合わせください。';
-      messageEl.style.display = 'block';
-      console.error(err);
-    })
-    .finally(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = '送信する';
     });
-  });
-</script>
-
-</body>
-</html>
+    
+    // 送信成功処理...
+  } catch (error) {
+    // エラー処理...
+  }
+});
