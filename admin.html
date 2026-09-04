@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人事評価フォーム 管理画面</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 { font-size: 1.5rem; margin-top: 0; }
+    h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    
+    .input-group { margin-bottom: 16px; }
+    label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.9rem; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
+    }
+    
+    .drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
+    }
+    .drop-zone:hover { background: #f1f5f9; border-color: #2563eb; }
+    
+    .btn {
+      background: #2563eb; color: white; border: none; padding: 10px 16px;
+      border-radius: 6px; font-weight: bold; cursor: pointer;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn-secondary { background: #64748b; }
+    .btn-danger { background: #ef4444; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+    
+    .form-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .form-item:last-child { border-bottom: none; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;
+    }
+    .badge-public { background: #dcfce7; color: #166534; }
+    .badge-private { background: #fee2e2; color: #991b1b; }
+    
+    .url-box {
+      background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #e2e8f0;
+      font-family: monospace; font-size: 0.85rem; margin-top: 6px; word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⚙️ 人事評価フォーム 管理画面</h1>
+
+  <!-- 認証キー設定 -->
+  <div class="card">
+    <h2>1. 管理者認証 (GitHub Key)</h2>
+    <div class="input-group">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+    </div>
+    <button class="btn btn-sm" onclick="saveToken()">保存してログイン状態にする</button>
+    <span id="token-status" style="margin-left: 10px; font-size: 0.85rem; color: #166534;"></span>
+  </div>
+
+  <!-- 新規フォーム作成 -->
+  <div class="card">
+    <h2>2. 新しいフォームを作成（CSVアップロード）</h2>
+    <div class="drop-zone" id="drop-zone">
+      <p>ここにCSVファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+      <input type="file" id="file-input" accept=".csv" style="display: none;">
+    </div>
+  </div>
+
+  <!-- フォーム一覧 -->
+  <div class="card">
+    <h2>3. 作成済みフォーム一覧</h2>
+    <div id="form-list">
+      <!-- 擬似データ（見た目のプレビュー用） -->
+      <div class="form-item">
+        <div>
+          <div><strong>evaluation_18.csv</strong> <span class="badge badge-public">公開中</span></div>
+          <div class="url-box">https://.../index.html?form=evaluation_18.csv</div>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-secondary">非公開にする</button>
+          <button class="btn btn-sm btn-danger">削除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 初回表示処理（トークンの読み込み）
+  document.addEventListener('DOMContentLoaded', () => {
+    const savedToken = localStorage.getItem('gh_token');
+    if (savedToken) {
+      document.getElementById('github-token').value = savedToken;
+      document.getElementById('token-status').textContent = '✓ 端末に保存済み';
+    }
+  });
+
+  function saveToken() {
+    const token = document.getElementById('github-token').value;
+    if (token) {
+      localStorage.setItem('gh_token', token);
+      document.getElementById('token-status').textContent = '✓ 保存しました！';
+    } else {
+      localStorage.removeItem('gh_token');
+      document.getElementById('token-status').textContent = '保存を解除しました';
+    }
+  }
+
+  // ドラッグ＆ドロップのイベント枠組み
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => e.preventDefault());
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) {
+      alert('ファイルを認識しました: ' + e.dataTransfer.files[0].name + '\n（※現在画面プレビューモードです）');
+    }
+  });
+</script>
+
+</body>
+</html>
