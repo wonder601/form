@@ -1,31 +1,192 @@
-// URLから現在のCSVファイル名を取得（例: "test_eval.csv" -> "test_eval"）
-const urlParams = new URLSearchParams(window.location.search);
-const csvFileName = urlParams.get('form') || '';
-const currentSheetName = csvFileName.replace('.csv', '');
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人事評価フォーム</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    h1 { font-size: 1.5rem; margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+    .required { color: #ef4444; margin-left: 4px; }
+    input[type="text"], textarea, select {
+      width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      box-sizing: border-box; font-size: 1rem;
+    }
+    textarea { height: 100px; resize: vertical; }
+    .btn-submit {
+      width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
+      border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer;
+    }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+    .rating-group { display: flex; gap: 12px; }
+    .rating-label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    #message { margin-top: 20px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
+    .msg-success { background: #dcfce7; color: #166534; }
+    .msg-error { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+<div class="container">
+  <h1 id="form-title">フォーム読み込み中...</h1>
+  <form id="eval-form" style="display: none;">
+    <div id="form-fields"></div>
+    <button type="submit" class="btn-submit" id="submit-btn">送信する</button>
+  </form>
+  <div id="message"></div>
+</div>
 
-  // フォームの入力値を取得
-  const formData = new FormData(form);
-  const data = {};
-  formData.forEach((value, key) => {
-    data[key] = value;
+<script>
+  // ★ご自身のGAS WebアプリURLを設定してください
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/XXXXX/exec';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const csvFileName = urlParams.get('form') || 'evaluation_18.csv';
+  const currentSheetName = csvFileName.replace('.csv', '');
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadFormDefinition();
   });
 
-  // ★ここを追加！：保存先のシート名（タブ名）をデータに含める
-  data.sheetName = currentSheetName;
-
-  // GASへ送信
-  try {
-    const response = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(data)
+  function loadFormDefinition() {
+    Papa.parse(csvFileName, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        renderForm(results.data);
+      },
+      error: () => {
+        document.getElementById('form-title').textContent = '指定されたフォームが見つかりません。';
+      }
     });
-    
-    // 送信成功処理...
-  } catch (error) {
-    // エラー処理...
   }
-});
+
+  function renderForm(data) {
+    const fieldsContainer = document.getElementById('form-fields');
+    fieldsContainer.innerHTML = '';
+
+    data.forEach(item => {
+      if (item.type === 'header') {
+        document.getElementById('form-title').textContent = item.label;
+        return;
+      }
+      if (item.type === 'config') return;
+
+      const group = document.createElement('div');
+      group.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.textContent = item.label;
+      if (item.required === 'true') {
+        const req = document.createElement('span');
+        req.className = 'required';
+        req.textContent = '*';
+        label.appendChild(req);
+      }
+      group.appendChild(label);
+
+      if (item.description) {
+        const desc = document.createElement('div');
+        desc.style.fontSize = '0.85rem';
+        desc.style.color = '#64748b';
+        desc.style.marginBottom = '6px';
+        desc.textContent = item.description;
+        group.appendChild(desc);
+      }
+
+      if (item.type === 'text') {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = item.id;
+        input.placeholder = item.placeholder || '';
+        if (item.required === 'true') input.required = true;
+        group.appendChild(input);
+      } else if (item.type === 'textarea') {
+        const textarea = document.createElement('textarea');
+        textarea.name = item.id;
+        textarea.placeholder = item.placeholder || '';
+        if (item.required === 'true') textarea.required = true;
+        group.appendChild(textarea);
+      } else if (item.type === 'rating') {
+        const ratingBox = document.createElement('div');
+        ratingBox.className = 'rating-group';
+        for (let i = 1; i <= 5; i++) {
+          const lbl = document.createElement('label');
+          lbl.className = 'rating-label';
+          lbl.innerHTML = `<input type="radio" name="${item.id}" value="${i}" ${item.required === 'true' && i === 1 ? 'required' : ''}> ${i}`;
+          ratingBox.appendChild(lbl);
+        }
+        group.appendChild(ratingBox);
+      }
+
+      fieldsContainer.appendChild(group);
+    });
+
+    document.getElementById('eval-form').style.display = 'block';
+  }
+
+  // 送信処理
+  document.getElementById('eval-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submit-btn');
+    const msgEl = document.getElementById('message');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中...';
+    msgEl.style.display = 'none';
+
+    const formData = new FormData(e.target);
+    const payload = {};
+    formData.forEach((value, key) => { payload[key] = value; });
+
+    // ★タブ（シート）名を送信データにセット★
+    payload.sheetName = currentSheetName;
+
+    try {
+      const res = await fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+
+      if (result.status === 'success') {
+        msgEl.textContent = '送信が完了しました。ご協力ありがとうございました！';
+        msgEl.className = 'msg-success';
+        msgEl.style.display = 'block';
+        e.target.reset();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (err) {
+      msgEl.textContent = '送信エラーが発生しました。時間を置いて再度お試しください。';
+      msgEl.className = 'msg-error';
+      msgEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送信する';
+    }
+  });
+</script>
+
+</body>
+</html>
