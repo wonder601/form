@@ -8,36 +8,42 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f8fafc;
-      color: #1e293b;
+      background-color: #f1f5f9;
+      color: #0f172a;
       margin: 0;
-      padding: 20px;
+      padding: 40px 20px;
+      line-height: 1.5;
     }
     .container {
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    h1 { font-size: 1.5rem; margin-top: 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.95rem; }
+    h1 { font-size: 1.5rem; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+    .form-group { margin-bottom: 24px; }
+    label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
     .required { color: #ef4444; margin-left: 4px; }
+    .description { font-size: 0.85rem; color: #64748b; margin-bottom: 8px; }
     input[type="text"], textarea, select {
       width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
       box-sizing: border-box; font-size: 1rem;
     }
-    textarea { height: 100px; resize: vertical; }
+    textarea { min-height: 100px; resize: vertical; }
+    
+    /* ラジオボタン・チェックボックス等のスタイル */
+    .option-group { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+    .option-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal; }
+    .option-label input { cursor: pointer; }
+
     .btn-submit {
       width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
-      border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer;
+      border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 16px;
     }
     .btn-submit:hover { background: #1d4ed8; }
     .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
-    .rating-group { display: flex; gap: 12px; }
-    .rating-label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
     #message { margin-top: 20px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
     .msg-success { background: #dcfce7; color: #166534; }
     .msg-error { background: #fee2e2; color: #991b1b; }
@@ -56,7 +62,7 @@
 
 <script>
   // ★ご自身のGAS WebアプリURLを設定してください
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/XXXXX/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwWtoVhaTj4X7HTQKYdg1ITaiiilJEVnjNdVjjTE1DaIjEyM2iOQQdPKnTUzZxvuVwI/exec';
 
   const urlParams = new URLSearchParams(window.location.search);
   const csvFileName = urlParams.get('form') || 'evaluation_18.csv';
@@ -85,6 +91,8 @@
     fieldsContainer.innerHTML = '';
 
     data.forEach(item => {
+      if (!item.type) return;
+
       if (item.type === 'header') {
         document.getElementById('form-title').textContent = item.label;
         return;
@@ -106,13 +114,12 @@
 
       if (item.description) {
         const desc = document.createElement('div');
-        desc.style.fontSize = '0.85rem';
-        desc.style.color = '#64748b';
-        desc.style.marginBottom = '6px';
+        desc.className = 'description';
         desc.textContent = item.description;
         group.appendChild(desc);
       }
 
+      // テキスト入力
       if (item.type === 'text') {
         const input = document.createElement('input');
         input.type = 'text';
@@ -120,22 +127,51 @@
         input.placeholder = item.placeholder || '';
         if (item.required === 'true') input.required = true;
         group.appendChild(input);
-      } else if (item.type === 'textarea') {
+      } 
+      // 複数行テキスト
+      else if (item.type === 'textarea') {
         const textarea = document.createElement('textarea');
         textarea.name = item.id;
         textarea.placeholder = item.placeholder || '';
         if (item.required === 'true') textarea.required = true;
         group.appendChild(textarea);
-      } else if (item.type === 'rating') {
-        const ratingBox = document.createElement('div');
-        ratingBox.className = 'rating-group';
-        for (let i = 1; i <= 5; i++) {
+      } 
+      // 単一選択（ラジオボタン または 評価 rating）
+      else if (item.type === 'radio' || item.type === 'rating') {
+        const optContainer = document.createElement('div');
+        optContainer.className = 'option-group';
+        
+        // options列のカンマ区切り（または 1,2,3,4,5）を取得
+        const opts = item.options ? item.options.split('|').map(s => s.trim()) : ['1', '2', '3', '4', '5'];
+        
+        opts.forEach((opt, idx) => {
           const lbl = document.createElement('label');
-          lbl.className = 'rating-label';
-          lbl.innerHTML = `<input type="radio" name="${item.id}" value="${i}" ${item.required === 'true' && i === 1 ? 'required' : ''}> ${i}`;
-          ratingBox.appendChild(lbl);
-        }
-        group.appendChild(ratingBox);
+          lbl.className = 'option-label';
+          const isReq = item.required === 'true' && idx === 0 ? 'required' : '';
+          lbl.innerHTML = `<input type="radio" name="${item.id}" value="${opt}" ${isReq}> ${opt}`;
+          optContainer.appendChild(lbl);
+        });
+        group.appendChild(optContainer);
+      }
+      // ドロップダウン選択
+      else if (item.type === 'select') {
+        const select = document.createElement('select');
+        select.name = item.id;
+        if (item.required === 'true') select.required = true;
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '選択してください';
+        select.appendChild(defaultOpt);
+
+        const opts = item.options ? item.options.split('|').map(s => s.trim()) : [];
+        opts.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt;
+          option.textContent = opt;
+          select.appendChild(option);
+        });
+        group.appendChild(select);
       }
 
       fieldsContainer.appendChild(group);
@@ -158,7 +194,7 @@
     const payload = {};
     formData.forEach((value, key) => { payload[key] = value; });
 
-    // ★タブ（シート）名を送信データにセット★
+    // ★シート名（タブ名）を保存データへ送信★
     payload.sheetName = currentSheetName;
 
     try {
