@@ -1,4 +1,4 @@
 id,type,label,description,options,required,placeholder
 form_title,header,warp説明会　参加可能日,,,,
-emp_name,text,氏名,,,TRUE,山田 太郎
-q01,checkbox,参加可能日,ご参加が可能な日をすべて選択してください。\n※複数選択可能,9/1（火）|9/2（水）|9/3（木）|9/4（金）|9/5（土）,FALSE,
+emp_name,text,氏名,,,true,山田 太郎
+q01,checkbox,参加可能日,ご参加が可能な日をすべて選択してください。\n※複数選択可能,9/1（火）|9/2（水）|9/3（木）|9/4（金）|9/5（土）,false,
