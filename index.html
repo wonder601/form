@@ -8,7 +8,8 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f1f5f9;
+      /* ★背景色を #0097E0 に変更 */
+      background-color: #0097E0;
       color: #0f172a;
       margin: 0;
       padding: 40px 20px;
@@ -20,35 +21,42 @@
       background: #ffffff;
       border-radius: 12px;
       padding: 32px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      /* 少し深めのシャドウで背景との境界をクッキリ配置 */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     }
     
-    /* ★ヘッダー（左右横並びレイアウト） */
+    /* ヘッダー（左右横並びレイアウト） */
     .header-container {
       display: flex;
-      justify-content: space-between; /* 左側にタイトル、右側にロゴ */
-      align-items: center; /* 上下中央揃え */
+      justify-content: space-between;
+      align-items: center;
       gap: 16px;
       border-bottom: 2px solid #e2e8f0;
       padding-bottom: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 32px;
     }
     h1 {
       font-size: 1.5rem;
       margin: 0;
-      flex: 1; /* タイトル領域を拡張 */
+      flex: 1;
+      color: #0f172a;
     }
     .header-logo {
-      max-height: 50px; /* 右端ロゴの高さ（お好みで調整可） */
-      max-width: 160px; /* 右端ロゴの幅上限 */
+      max-height: 50px;
+      max-width: 160px;
       height: auto;
       object-fit: contain;
     }
 
-    /* 画面幅が狭い場合（スマホ等）の見た目調整 */
     @media (max-width: 480px) {
+      body {
+        padding: 20px 12px;
+      }
+      .container {
+        padding: 24px 16px;
+      }
       .header-container {
-        flex-direction: column-reverse; /* スマホではロゴを上に配置 */
+        flex-direction: column-reverse;
         align-items: flex-start;
       }
       .header-logo {
@@ -56,26 +64,45 @@
       }
     }
 
+    /* 質問ごとの間隔 */
     .form-group { margin-bottom: 36px; }
+
     label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.95rem; }
     .required { color: #ef4444; margin-left: 4px; }
+
+    /* 補足説明文 */
     .description { font-size: 0.78rem; color: #64748b; margin-bottom: 8px; line-height: 1.5; }
+
     input[type="text"], textarea, select {
       width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
       box-sizing: border-box; font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    /* 入力欄にフォーカスした際のハイライトカラーも #0097E0 に同調 */
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #0097E0;
+      box-shadow: 0 0 0 3px rgba(0, 151, 224, 0.2);
     }
     textarea { min-height: 100px; resize: vertical; }
     
     .option-group { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
     .option-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: normal; }
-    .option-label input { cursor: pointer; }
-
-    .btn-submit {
-      width: 100%; background: #2563eb; color: white; border: none; padding: 12px;
-      border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 16px;
+    .option-label input {
+      cursor: pointer;
+      accent-color: #0097E0; /* チェックボックス/ラジオボタンのアクセントカラー */
     }
-    .btn-submit:hover { background: #1d4ed8; }
+
+    /* ★送信ボタンのデザインを #0097E0 に変更 */
+    .btn-submit {
+      width: 100%; background: #0097E0; color: white; border: none; padding: 14px;
+      border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 16px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover { background: #0081C0; }
+    .btn-submit:active { transform: scale(0.99); }
     .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+
     #message { margin-top: 20px; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
     .msg-success { background: #dcfce7; color: #166534; }
     .msg-error { background: #fee2e2; color: #991b1b; }
@@ -86,7 +113,6 @@
 <div class="container">
   <div class="header-container">
     <h1 id="form-title">フォーム読み込み中...</h1>
-    <!-- ★右端に配置されるロゴ画像 -->
     <img id="form-logo" class="header-logo" src="" alt="ロゴ" style="display: none;">
   </div>
 
