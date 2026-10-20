@@ -186,4 +186,20 @@
         <div class="last-updated">最終回答: ${item.lastUpdated}</div>
         <div class="respondents-section">
           <div class="respondents-title">提出者一覧 (最新順):</div>
-          <div class="respondents-
+          <div class="respondents-list">
+            ${respondentsHtml}
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>
+
+</body>
+</html>
