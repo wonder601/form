@@ -127,7 +127,7 @@
   <div class="header">
     <h1>📊 評価シート 回答状況ダッシュボード</h1>
     <div class="status-badge">
-      <div class="pulse"></div> リアルタイム更新中 (10秒ごと)
+      <div class="pulse"></div> リアルタイム更新中 (1分ごと)
     </div>
   </div>
 
@@ -144,7 +144,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     fetchStatus();
-    setInterval(fetchStatus, 10000);
+    setInterval(fetchStatus, 600000);
   });
 
   async function fetchStatus() {
